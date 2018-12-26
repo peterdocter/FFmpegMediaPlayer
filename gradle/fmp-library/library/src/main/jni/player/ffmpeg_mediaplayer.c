@@ -776,7 +776,7 @@ int stream_component_open(VideoState *is, int stream_index) {
 	AudioPlayer *player = malloc(sizeof(AudioPlayer));
     is->audio_player = player;
     createEngine(&is->audio_player);
-    createBufferQueueAudioPlayer(&is->audio_player, is, codecCtx->channels, codecCtx->sample_rate);
+    createBufferQueueAudioPlayer(&is->audio_player, is, codecCtx->channels, codecCtx->sample_rate, is->stream_type);
     //is->audio_hw_buf_size = 4096;
   } else if (codecCtx->codec_type == AVMEDIA_TYPE_VIDEO) {
 	// Set video settings from codec info
@@ -1061,6 +1061,7 @@ VideoState * create() {
 
 	is = av_mallocz(sizeof(VideoState));
 	is->last_paused = -1;
+	is->stream_type = 3;
 
     return is;
 }
@@ -1237,7 +1238,7 @@ int setDataSourceFD(VideoState **ps, int fd, int64_t offset, int64_t length) {
 	return NO_ERROR;
 }
 
-int setVideoSurface(VideoState **ps, ANativeWindow* native_window) {
+int setVideoSurface(VideoState **ps, void* native_window) {
     printf("set_native_window\n");
 
 	VideoState *is = *ps;
@@ -1456,6 +1457,7 @@ int setAudioStreamType(VideoState **ps, int type) {
 	VideoState *is = *ps;
 
 	if (is) {
+		is->stream_type = type;
 		return NO_ERROR;
 	}
 
@@ -1775,7 +1777,17 @@ int setMetadataFilter(VideoState **ps, char *allow[], char *block[]) {
 }
 
 int getMetadata(VideoState **ps, AVDictionary **metadata) {
-	return 0;
+    printf("get_metadata\n");
+    
+    VideoState *state = *ps;
+    
+    if (!state || !state->pFormatCtx) {
+        return FAILURE;
+    }
+    
+    get_metadata_internal(state->pFormatCtx, metadata);
+    
+    return SUCCESS;
 }
 
 int main(int argc, char *argv[]) {
